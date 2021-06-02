@@ -3,6 +3,7 @@ use anyhow::Result;
 
 fn main() -> Result<()> {
     let libs = system_deps::Config::new().probe()?;
+    let has_gpgme_pkgconfig = libs.get_by_name("gpgme").is_some();
     let with_zck: u8 = libs.get_by_name("zck").is_some().into();
 
     // first, the submodule proper
@@ -34,6 +35,9 @@ fn main() -> Result<()> {
         .always_configure(false)
         .build_target("all")
         .build();
+    if !has_gpgme_pkgconfig {
+        println!("cargo:rustc-link-lib=gpgme");
+    }
     println!(
         "cargo:rustc-link-search=native={}/build/libdnf",
         libdnf.display()
