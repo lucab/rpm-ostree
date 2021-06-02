@@ -3,6 +3,8 @@ use anyhow::Result;
 
 fn main() -> Result<()> {
     let libs = system_deps::Config::new().probe()?;
+    let has_gpgme_pkgconfig = libs.get_by_name("gpgme").is_some();
+    let with_zck: u8 = libs.get_by_name("zck").is_some().into();
 
     // first, the submodule proper
     let libdnf = cmake::Config::new("../../libdnf")
@@ -23,6 +25,8 @@ fn main() -> Result<()> {
         // We don't need docs
         .define("WITH_HTML:BOOL", "0")
         .define("WITH_MAN:BOOL", "0")
+        // Auto-enable zchunk, if present
+        .define("WITH_ZCHUNK:BOOL", format!("{}", with_zck))
         // Don't need bindings
         .define("WITH_BINDINGS:BOOL", "0")
         // Needed in Koji at least because timestamps(?)
@@ -31,6 +35,9 @@ fn main() -> Result<()> {
         .always_configure(false)
         .build_target("all")
         .build();
+    if !has_gpgme_pkgconfig {
+        println!("cargo:rustc-link-lib=gpgme");
+    }
     println!(
         "cargo:rustc-link-search=native={}/build/libdnf",
         libdnf.display()
