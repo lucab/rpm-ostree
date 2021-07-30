@@ -121,6 +121,12 @@ pub mod ffi {
         fn composeutil_legacy_prep_dev(rootfs_dfd: i32) -> Result<()>;
         fn print_ostree_txn_stats(stats: Pin<&mut OstreeRepoTransactionStats>);
         fn write_commit_id(target_path: &str, revision: &str) -> Result<()>;
+        unsafe fn write_compose_json(
+            target_path: &str,
+            stats: *mut OstreeRepoTransactionStats,
+            new_ref: &str,
+            content_checksum: &str,
+        ) -> Result<()>;
     }
 
     // cliwrap.rs

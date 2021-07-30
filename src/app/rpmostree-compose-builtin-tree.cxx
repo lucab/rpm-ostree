@@ -1153,14 +1153,28 @@ impl_commit_tree (RpmOstreeTreeComposeContext *self,
   else
     g_print ("Wrote commit: %s\n", new_revision);
 
-  /* Optionally write a JSON summary of this compose-commit run */
+  // Optionally write a JSON summary of this compose-commit run.
   if (opt_write_composejson_to)
+    {
+      g_autofree char *content_checksum = ostree_commit_get_content_checksum (new_commit);
+      if (!content_checksum)
+        return glnx_throw (error, "malformed commit variant");
+
+      const char *commit_version = NULL;
+      g_autoptr(GVariant) new_commit_inline_meta = g_variant_get_child_value (new_commit, 0);
+      (void)g_variant_lookup (new_commit_inline_meta, OSTREE_COMMIT_META_KEY_VERSION, "&s", &commit_version);
+      auto ref = new_ref ?: "";
+      
+      CXX_TRY(write_compose_json(opt_write_commitid_to, statsp, ref, content_checksum),
+              error);
+    }
+    /*
     if (!rpmostree_composeutil_write_composejson (self->repo,
                                                   opt_write_composejson_to, statsp,
                                                   new_revision, new_commit, new_ref,
                                                   cancellable, error))
       return glnx_prefix_error (error, "Failed to write composejson");
-
+    */
   if (opt_write_commitid_to)
     CXX_TRY(write_commit_id(opt_write_commitid_to, new_revision), error);
 

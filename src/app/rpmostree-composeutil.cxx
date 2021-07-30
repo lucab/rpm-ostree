@@ -136,9 +136,7 @@ rpmostree_composeutil_finalize_metadata (GHashTable *metadata,
   return util::move_nullify (ret);
 }
 
-/* Implements --write-composejson-to, and also prints values.
- * If `path` is NULL, we'll just print some data.
- */
+// Implements --write-composejson-to.
 gboolean
 rpmostree_composeutil_write_composejson (OstreeRepo  *repo,
                                          const char *path,
@@ -149,6 +147,7 @@ rpmostree_composeutil_write_composejson (OstreeRepo  *repo,
                                          GCancellable *cancellable,
                                          GError    **error)
 {
+  g_assert (path != NULL);
   g_autoptr(GVariant) new_commit_inline_meta = g_variant_get_child_value (new_commit, 0);
 
   g_auto(GVariantBuilder) builder;
@@ -200,10 +199,10 @@ rpmostree_composeutil_write_composejson (OstreeRepo  *repo,
     g_variant_builder_add (&builder, "{sv}", "rpm-ostree-inputhash", g_variant_new_string (inputhash));
 
   g_autofree char *parent_revision = ostree_commit_get_parent (new_commit);
-  if (path && parent_revision)
+  if (parent_revision)
     {
       /* don't error if the parent doesn't exist */
-      gboolean parent_exists;
+      gboolean parent_exists = false;
       if (!ostree_repo_has_object (repo, OSTREE_OBJECT_TYPE_COMMIT, parent_revision,
                                    &parent_exists, cancellable, error))
         return FALSE;
@@ -217,34 +216,34 @@ rpmostree_composeutil_write_composejson (OstreeRepo  *repo,
           g_variant_builder_add (&builder, "{sv}", "pkgdiff", diffv);
         }
     }
+  
+  g_autoptr(GVariant) composemeta_v = g_variant_builder_end (&builder);
 
-  if (path)
-    {
-      g_autoptr(GVariant) composemeta_v = g_variant_builder_end (&builder);
-      JsonNode *composemeta_node = json_gvariant_serialize (composemeta_v);
-      glnx_unref_object JsonGenerator *generator = json_generator_new ();
-      json_generator_set_root (generator, composemeta_node);
+  //  {
+  //    JsonNode *composemeta_node = json_gvariant_serialize (composemeta_v);
+  //    glnx_unref_object JsonGenerator *generator = json_generator_new ();
+  //    json_generator_set_root (generator, composemeta_node);
 
-      char *dnbuf = strdupa (path);
-      const char *dn = dirname (dnbuf);
-      g_auto(GLnxTmpfile) tmpf = { 0, };
-      if (!glnx_open_tmpfile_linkable_at (AT_FDCWD, dn, O_WRONLY | O_CLOEXEC,
-                                          &tmpf, error))
-        return FALSE;
-      g_autoptr(GOutputStream) out = g_unix_output_stream_new (tmpf.fd, FALSE);
-      /* See also similar code in status.c */
-      if (json_generator_to_stream (generator, out, cancellable, error) <= 0
-          || (error != NULL && *error != NULL))
-        return FALSE;
+  //    char *dnbuf = strdupa (path);
+  //    const char *dn = dirname (dnbuf);
+  //    g_auto(GLnxTmpfile) tmpf = { 0, };
+  //    if (!glnx_open_tmpfile_linkable_at (AT_FDCWD, dn, O_WRONLY | O_CLOEXEC,
+  //                                        &tmpf, error))
+  //      return FALSE;
+  //    g_autoptr(GOutputStream) out = g_unix_output_stream_new (tmpf.fd, FALSE);
+  //    /* See also similar code in status.c */
+  //    if (json_generator_to_stream (generator, out, cancellable, error) <= 0
+  //        || (error != NULL && *error != NULL))
+  //      return FALSE;
 
-      /* World readable to match --write-commitid-to which uses umask */
-      if (!glnx_fchmod (tmpf.fd, 0644, error))
-        return FALSE;
+  //    /* World readable to match --write-commitid-to which uses umask */
+  //    if (!glnx_fchmod (tmpf.fd, 0644, error))
+  //      return FALSE;
 
-      if (!glnx_link_tmpfile_at (&tmpf, GLNX_LINK_TMPFILE_REPLACE,
-                                 AT_FDCWD, path, error))
-        return FALSE;
-    }
+  //    if (!glnx_link_tmpfile_at (&tmpf, GLNX_LINK_TMPFILE_REPLACE,
+  //                               AT_FDCWD, path, error))
+  //      return FALSE;
+  //  }
 
   return TRUE;
 }
