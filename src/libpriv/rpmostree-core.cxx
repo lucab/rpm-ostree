@@ -2610,7 +2610,10 @@ handle_file_dispositions (RpmOstreeContext *self, int tmprootfs_dfd, rpmts ts,
         {
           rpm_color_t color = GPOINTER_TO_UINT (colorp);
           if (ts_color && !(ts_color & color))
-            ht_insert_path_for_nevra (files_skip_add, nevra, canonicalize_rpmfi_path (path), NULL);
+            {
+              g_autofree char *canon_path = canonicalize_rpmfi_path (path);
+              ht_insert_path_for_nevra (files_skip_add, nevra, canon_path, NULL);
+            }
         }
     }
 
@@ -2669,8 +2672,10 @@ handle_file_dispositions (RpmOstreeContext *self, int tmprootfs_dfd, rpmts ts,
                 {
                   /* do we already have the preferred color installed? */
                   if (color & ts_prefcolor)
-                    ht_insert_path_for_nevra (files_skip_add, nevra, canonicalize_rpmfi_path (fn),
-                                              NULL);
+                    {
+                      g_autofree char *canon_path = canonicalize_rpmfi_path (fn);
+                      ht_insert_path_for_nevra (files_skip_add, nevra, canon_path, NULL);
+                    }
                   else if (other_color & ts_prefcolor)
                     {
                       /* the new pkg is bringing our favourite color, give way now so we let
@@ -2707,16 +2712,15 @@ handle_file_dispositions (RpmOstreeContext *self, int tmprootfs_dfd, rpmts ts,
           /* see handleColorConflict() */
           if (color && other_color && (color != other_color))
             {
+              g_autofree char *canon_path = canonicalize_rpmfi_path (path);
               if (color & ts_prefcolor)
                 {
-                  ht_insert_path_for_nevra (files_skip_add, other_nevra,
-                                            canonicalize_rpmfi_path (path), NULL);
+                  ht_insert_path_for_nevra (files_skip_add, other_nevra, canon_path, NULL);
                   g_hash_table_insert (path_to_nevra, (gpointer)path, (gpointer)nevra);
                   g_hash_table_insert (path_to_color, (gpointer)path, colorp);
                 }
               else if (other_color & ts_prefcolor)
-                ht_insert_path_for_nevra (files_skip_add, nevra, canonicalize_rpmfi_path (path),
-                                          NULL);
+                ht_insert_path_for_nevra (files_skip_add, nevra, canon_path, NULL);
             }
         }
     }
